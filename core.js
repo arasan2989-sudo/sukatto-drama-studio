@@ -4,12 +4,14 @@
 const EP1=['月曜の朝、私の企画書が消えていた。','課長は言った。「君は何もしていない」','会議では、私の案が課長の手柄になった。','悔しくても、その場では言い返さなかった。','私は保存していた変更履歴を開いた。','初稿の日付も、修正者の名前も残っていた。','翌朝、部長に事実だけを報告した。','部長は全員の前で作成者を尋ねた。','課長は笑って「私です」と答えた。','そこで画面に、変更履歴が映し出された。','部長が聞いた。「この名前は誰ですか」','課長は黙った。会議室が静まり返った。','部長は私に企画の説明を任せた。','準備した言葉が、今度は皆に届いた。','帰り道、胸を張って会社の扉を出た。'];
 const EP2=['金曜の夜、また私だけが残業だった。','先輩は「新人の仕事だ」と帰っていった。','当番表を見ると、毎週私の名前があった。','私は怒る前に、三か月分の表を集めた。','担当回数を数え、小さな一覧にまとめた。','翌週、当番の決め方を会議で尋ねた。','先輩は「公平に回している」と答えた。','私は一覧を配り、数字を読み上げた。','私が十二回。ほかの人は一回ずつだった。','部長が当番表と照らし合わせた。','先輩は「断らないから」とつぶやいた。','部長は言った。「それは公平ではない」','当番は全員で順番に回すことになった。','その金曜日、私は時間通りに席を立った。','夕焼けの中、久しぶりに友人へ電話した。'];
 const safeName=s=>typeof s==='string'&&s.length>0&&s.length<160&&!/[\\/\x00-\x1f]/.test(s)&&s!=='.'&&s!=='..';
-function template(ep=1){return {schema_version:1,title:ep===1?'消えた企画書':'押しつけられた当番表',mode:'test',narration_verified:false,bgm:'bgm.wav',sfx:'sfx.wav',mix:{bgm:.15,sfx:.35,narration:1},sfx_events:[{scene:7,offset:0}],segments:(ep===1?EP1:EP2).map((text,i)=>({text,image:`${String(i).padStart(2,'0')}.png`,audio:`${String(i).padStart(2,'0')}.wav`})),licenses:{}};}
-function names(m){return [...new Set([...m.segments.flatMap(s=>[s.image,s.audio]),m.bgm,m.sfx])];}
+function cloneTemplate(){return JSON.parse(JSON.stringify(root.EditEngine.DEFAULTS));}
+function template(ep=1){return {schema_version:2,edit_template:root.EditEngine?cloneTemplate():undefined,opening:{enabled:true,channel:'仕事終わりのスカッとドラマ',episode:'第'+ep+'話',title:ep===1?'消えた企画書':'押しつけられた当番表',hook:ep===1?'その手柄、本当にあなたのもの？':'その当番、本当に公平ですか？',duration:1.2,mode:'overlay',highlight_words:ep===1?['手柄']:['公平']},title:ep===1?'消えた企画書':'押しつけられた当番表',mode:'test',narration_verified:false,bgm:'bgm.wav',sfx:'sfx.wav',mix:{bgm:.15,sfx:.35,narration:1},sfx_events:[{scene:0,offset:.35},{scene:7,offset:0}],segments:(ep===1?EP1:EP2).map((text,i)=>({text,image:`${String(i).padStart(2,'0')}.png`,audio:`${String(i).padStart(2,'0')}.wav`})),licenses:{}};}
+function names(m){const bg=root.EditEngine?root.EditEngine.settings(m).opening.background:m.opening?.background||null;return [...new Set([...m.segments.flatMap(s=>[s.image,s.audio]),m.bgm,m.sfx,...(bg?[bg]:[])])];}
 function validate(m,files){
  if(!m||!['test','production'].includes(m.mode)||typeof m.title!=='string'||!m.title.trim())throw Error('title / mode を確認してください。');
  if(!Array.isArray(m.segments)||m.segments.length<12||m.segments.length>18)throw Error('静止画・字幕は12〜18シーン必要です。');
  for(const s of m.segments){if(typeof s.text!=='string'||!s.text.trim()||[...s.text].length>45||/[\r\n\x00-\x1f]/.test(s.text))throw Error('字幕は改行なしの1〜45文字で指定してください。');}
+ if(root.EditEngine)root.EditEngine.validate(m);
  for(const n of names(m)){
   if(!safeName(n))throw Error('素材名はフォルダなしのファイル名で指定してください。');
   if(!files.has(n))throw Error('素材がありません: '+n);
